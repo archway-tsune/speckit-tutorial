@@ -26,7 +26,14 @@ npm install
 ### 3. 環境変数の設定
 
 ```bash
+# Linux/Mac:
 cp .env.example .env
+
+# Windows (コマンドプロンプト):
+copy .env.example .env
+
+# Windows (PowerShell):
+Copy-Item .env.example .env
 ```
 
 `.env` ファイルを編集:
@@ -90,6 +97,7 @@ npm run dev
 
 ### ユーザー登録
 
+**Linux/Mac:**
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/register \
   -H "Content-Type: application/json" \
@@ -100,43 +108,66 @@ curl -X POST http://localhost:3000/api/v1/auth/register \
   }'
 ```
 
+**Windows (コマンドプロンプト):**
+```cmd
+curl -X POST http://localhost:3000/api/v1/auth/register -H "Content-Type: application/json" -d "{\"email\":\"user@example.com\",\"password\":\"password123\",\"name\":\"山田太郎\"}"
+```
+
+**Windows (PowerShell):**
+```powershell
+curl -X POST http://localhost:3000/api/v1/auth/register -H "Content-Type: application/json" -d '{"email":"user@example.com","password":"password123","name":"山田太郎"}'
+```
+
 レスポンス:
 ```json
 {
   "user": {
     "id": "550e8400-e29b-41d4-a716-446655440000",
     "email": "user@example.com",
-    "name": "山田太郎",
-    "createdAt": "2026-01-28T10:00:00.000Z"
+    "name": "山田太郎"
   },
   "accessToken": "eyJhbGciOiJIUzI1NiIs...",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIs...",
-  "expiresIn": 3600,
-  "tokenType": "Bearer"
+  "refreshToken": "550e8400-e29b-41d4-a716-..."
 }
 ```
 
 ### ログイン
 
+**Linux/Mac:**
 ```bash
 curl -X POST http://localhost:3000/api/v1/auth/login \
   -H "Content-Type: application/json" \
-  -d '{
-    "email": "user@example.com",
-    "password": "password123"
-  }'
+  -d '{"email": "user@example.com", "password": "password123"}'
+```
+
+**Windows (コマンドプロンプト):**
+```cmd
+curl -X POST http://localhost:3000/api/v1/auth/login -H "Content-Type: application/json" -d "{\"email\":\"user@example.com\",\"password\":\"password123\"}"
+```
+
+**Windows (PowerShell):**
+```powershell
+curl -X POST http://localhost:3000/api/v1/auth/login -H "Content-Type: application/json" -d '{"email":"user@example.com","password":"password123"}'
 ```
 
 ### 記事作成
 
+**Linux/Mac:**
 ```bash
 curl -X POST http://localhost:3000/api/v1/posts \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {accessToken}" \
-  -d '{
-    "title": "初めてのブログ記事",
-    "content": "これは記事の本文です。"
-  }'
+  -d '{"title": "初めてのブログ記事", "content": "これは記事の本文です。"}'
+```
+
+**Windows (コマンドプロンプト):**
+```cmd
+curl -X POST http://localhost:3000/api/v1/posts -H "Content-Type: application/json" -H "Authorization: Bearer {accessToken}" -d "{\"title\":\"初めてのブログ記事\",\"content\":\"これは記事の本文です。\"}"
+```
+
+**Windows (PowerShell):**
+```powershell
+curl -X POST http://localhost:3000/api/v1/posts -H "Content-Type: application/json" -H "Authorization: Bearer {accessToken}" -d '{"title":"初めてのブログ記事","content":"これは記事の本文です。"}'
 ```
 
 ### 記事一覧取得
@@ -157,21 +188,28 @@ curl "http://localhost:3000/api/v1/posts?sort=-createdAt"
 
 ### 記事更新
 
+**Linux/Mac:**
 ```bash
 curl -X PUT http://localhost:3000/api/v1/posts/{id} \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer {accessToken}" \
-  -d '{
-    "title": "更新されたタイトル",
-    "status": "published"
-  }'
+  -d '{"title": "更新されたタイトル", "status": "published"}'
+```
+
+**Windows (コマンドプロンプト):**
+```cmd
+curl -X PUT http://localhost:3000/api/v1/posts/{id} -H "Content-Type: application/json" -H "Authorization: Bearer {accessToken}" -d "{\"title\":\"更新されたタイトル\",\"status\":\"published\"}"
+```
+
+**Windows (PowerShell):**
+```powershell
+curl -X PUT http://localhost:3000/api/v1/posts/{id} -H "Content-Type: application/json" -H "Authorization: Bearer {accessToken}" -d '{"title":"更新されたタイトル","status":"published"}'
 ```
 
 ### 記事削除
 
 ```bash
-curl -X DELETE http://localhost:3000/api/v1/posts/{id} \
-  -H "Authorization: Bearer {accessToken}"
+curl -X DELETE http://localhost:3000/api/v1/posts/{id} -H "Authorization: Bearer {accessToken}"
 ```
 
 ---
@@ -226,18 +264,36 @@ npm run test:coverage
 ### ポートが使用中
 
 ```bash
-# ポートを使用しているプロセスを確認
+# Linux/Mac - ポートを使用しているプロセスを確認:
 lsof -i :3000
 
-# または別のポートを使用
+# Windows (コマンドプロンプト/PowerShell):
+netstat -ano | findstr :3000
+
+# 別のポートを使用する場合:
+# Linux/Mac:
 PORT=3001 npm run dev
+# Windows (コマンドプロンプト):
+set PORT=3001 && npm run dev
+# Windows (PowerShell):
+$env:PORT=3001; npm run dev
 ```
 
 ### データベースエラー
 
 ```bash
 # データベースファイルを削除して再作成
+
+# Linux/Mac:
 rm -f database/blog.db
+
+# Windows (コマンドプロンプト):
+del database\blog.db
+
+# Windows (PowerShell):
+Remove-Item database/blog.db -ErrorAction SilentlyContinue
+
+# その後マイグレーションを実行
 npm run db:migrate
 ```
 

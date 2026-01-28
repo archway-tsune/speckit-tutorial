@@ -32,7 +32,13 @@ JWT認証を備えたRESTful ブログ記事管理APIです。
 npm install
 
 # 環境変数の設定
+# Linux/Mac:
 cp .env.example .env
+# Windows (コマンドプロンプト):
+copy .env.example .env
+# Windows (PowerShell):
+Copy-Item .env.example .env
+
 # .env ファイルを編集してJWT_SECRETを設定
 
 # データベースマイグレーション
