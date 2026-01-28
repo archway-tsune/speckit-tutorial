@@ -1,0 +1,333 @@
+# 認証API コントラクト定義
+# ブランチ: 001-blog-api
+# 作成日: 2026-01-28
+
+openapi: 3.0.3
+info:
+  title: ブログAPI - 認証
+  description: ユーザー認証関連のエンドポイント
+  version: 1.0.0
+
+paths:
+  /api/v1/auth/register:
+    post:
+      summary: 新規ユーザー登録
+      description: メールアドレス、パスワード、ユーザー名で新規登録する
+      tags:
+        - 認証
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            example:
+              email: user@example.com
+              password: password123
+              name: 山田太郎
+      responses:
+        '201':
+          description: 登録成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 入力内容に誤りがあります
+                  details:
+                    - field: email
+                      message: 有効なメールアドレスを入力してください
+        '409':
+          description: メールアドレス重複
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: CONFLICT
+                  message: このメールアドレスは既に登録されています
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/login:
+    post:
+      summary: ログイン
+      description: メールアドレスとパスワードで認証し、トークンを取得する
+      tags:
+        - 認証
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: user@example.com
+              password: password123
+      responses:
+        '200':
+          description: ログイン成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: 認証失敗
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: メールアドレスまたはパスワードが正しくありません
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/refresh:
+    post:
+      summary: トークン更新
+      description: リフレッシュトークンを使用して新しいアクセストークンを取得する
+      tags:
+        - 認証
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshRequest'
+            example:
+              refreshToken: eyJhbGciOiJIUzI1NiIs...
+      responses:
+        '200':
+          description: トークン更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '401':
+          description: 無効なリフレッシュトークン
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: UNAUTHORIZED
+                  message: リフレッシュトークンが無効または期限切れです
+        '429':
+          description: レート制限超過
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/auth/logout:
+    post:
+      summary: ログアウト
+      description: 現在のリフレッシュトークンを無効化する
+      tags:
+        - 認証
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LogoutRequest'
+            example:
+              refreshToken: eyJhbGciOiJIUzI1NiIs...
+      responses:
+        '204':
+          description: ログアウト成功
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWTアクセストークン
+
+  schemas:
+    RegisterRequest:
+      type: object
+      required:
+        - email
+        - password
+        - name
+      properties:
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          minLength: 8
+          description: パスワード（8文字以上）
+          example: password123
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+          description: ユーザー名
+          example: 山田太郎
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: user@example.com
+        password:
+          type: string
+          format: password
+          description: パスワード
+          example: password123
+
+    RefreshRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: リフレッシュトークン
+          example: eyJhbGciOiJIUzI1NiIs...
+
+    LogoutRequest:
+      type: object
+      required:
+        - refreshToken
+      properties:
+        refreshToken:
+          type: string
+          description: 無効化するリフレッシュトークン
+          example: eyJhbGciOiJIUzI1NiIs...
+
+    AuthResponse:
+      type: object
+      properties:
+        user:
+          $ref: '#/components/schemas/User'
+        accessToken:
+          type: string
+          description: JWTアクセストークン
+          example: eyJhbGciOiJIUzI1NiIs...
+        refreshToken:
+          type: string
+          description: リフレッシュトークン
+          example: eyJhbGciOiJIUzI1NiIs...
+        expiresIn:
+          type: integer
+          description: アクセストークンの有効期間（秒）
+          example: 3600
+        tokenType:
+          type: string
+          description: トークンタイプ
+          example: Bearer
+
+    TokenResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: 新しいJWTアクセストークン
+          example: eyJhbGciOiJIUzI1NiIs...
+        expiresIn:
+          type: integer
+          description: アクセストークンの有効期間（秒）
+          example: 3600
+        tokenType:
+          type: string
+          description: トークンタイプ
+          example: Bearer
+
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: ユーザーID
+          example: 550e8400-e29b-41d4-a716-446655440000
+        email:
+          type: string
+          format: email
+          description: メールアドレス
+          example: user@example.com
+        name:
+          type: string
+          description: ユーザー名
+          example: 山田太郎
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+          example: '2026-01-28T10:00:00.000Z'
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: エラーコード
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - CONFLICT
+                - RATE_LIMIT_EXCEEDED
+                - INTERNAL_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: ユーザー向けエラーメッセージ
+              example: 入力内容に誤りがあります
+            details:
+              type: array
+              description: 詳細情報（オプション）
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: エラーのあるフィールド名
+                  message:
+                    type: string
+                    description: フィールド固有のエラーメッセージ

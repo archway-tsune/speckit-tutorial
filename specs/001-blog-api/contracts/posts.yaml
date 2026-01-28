@@ -1,0 +1,418 @@
+# 記事API コントラクト定義
+# ブランチ: 001-blog-api
+# 作成日: 2026-01-28
+
+openapi: 3.0.3
+info:
+  title: ブログAPI - 記事
+  description: ブログ記事の管理エンドポイント
+  version: 1.0.0
+
+paths:
+  /api/v1/posts:
+    get:
+      summary: 記事一覧取得
+      description: 公開済み記事の一覧を取得する（認証不要）
+      tags:
+        - 記事
+      parameters:
+        - name: page
+          in: query
+          description: ページ番号
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          example: 1
+        - name: limit
+          in: query
+          description: 1ページあたりの件数（最大100）
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          example: 10
+        - name: status
+          in: query
+          description: ステータスフィルター（認証時のみdraft指定可能）
+          schema:
+            type: string
+            enum:
+              - draft
+              - published
+          example: published
+        - name: sort
+          in: query
+          description: ソート順（-で降順）
+          schema:
+            type: string
+            enum:
+              - createdAt
+              - -createdAt
+              - updatedAt
+              - -updatedAt
+              - title
+              - -title
+            default: -createdAt
+          example: -createdAt
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PostListResponse'
+
+    post:
+      summary: 記事作成
+      description: 新しい記事を作成する（認証必須）
+      tags:
+        - 記事
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreatePostRequest'
+            example:
+              title: 初めてのブログ記事
+              content: これは記事の本文です。マークダウン形式で記述できます。
+      responses:
+        '201':
+          description: 作成成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: VALIDATION_ERROR
+                  message: 入力内容に誤りがあります
+                  details:
+                    - field: title
+                      message: タイトルは1文字以上200文字以下で入力してください
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /api/v1/posts/{id}:
+    get:
+      summary: 記事詳細取得
+      description: 指定IDの記事を取得する（公開記事は認証不要、下書きは作成者のみ）
+      tags:
+        - 記事
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 記事ID（UUID）
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+      responses:
+        '200':
+          description: 取得成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '404':
+          description: 記事が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: NOT_FOUND
+                  message: 指定された記事が見つかりません
+
+    put:
+      summary: 記事更新
+      description: 自分が作成した記事を更新する（認証必須）
+      tags:
+        - 記事
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 記事ID（UUID）
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePostRequest'
+            example:
+              title: 更新されたタイトル
+              content: 更新された本文です。
+              status: published
+      responses:
+        '200':
+          description: 更新成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Post'
+        '400':
+          description: バリデーションエラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限エラー（他人の記事）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: この記事を更新する権限がありません
+        '404':
+          description: 記事が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: 記事削除
+      description: 自分が作成した記事を削除する（認証必須）
+      tags:
+        - 記事
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: 記事ID（UUID）
+          schema:
+            type: string
+            format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440001
+      responses:
+        '204':
+          description: 削除成功
+        '401':
+          description: 認証エラー
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 権限エラー（他人の記事）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              example:
+                error:
+                  code: FORBIDDEN
+                  message: この記事を削除する権限がありません
+        '404':
+          description: 記事が見つからない
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWTアクセストークン
+
+  schemas:
+    CreatePostRequest:
+      type: object
+      required:
+        - title
+        - content
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 記事タイトル（1-200文字）
+          example: 初めてのブログ記事
+        content:
+          type: string
+          minLength: 1
+          description: 記事本文
+          example: これは記事の本文です。
+        status:
+          type: string
+          enum:
+            - draft
+            - published
+          default: draft
+          description: 公開ステータス（省略時はdraft）
+          example: draft
+
+    UpdatePostRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+          description: 記事タイトル（1-200文字）
+          example: 更新されたタイトル
+        content:
+          type: string
+          minLength: 1
+          description: 記事本文
+          example: 更新された本文です。
+        status:
+          type: string
+          enum:
+            - draft
+            - published
+          description: 公開ステータス
+          example: published
+
+    Post:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: 記事ID
+          example: 550e8400-e29b-41d4-a716-446655440001
+        title:
+          type: string
+          description: 記事タイトル
+          example: 初めてのブログ記事
+        content:
+          type: string
+          description: 記事本文
+          example: これは記事の本文です。
+        author:
+          type: string
+          description: 著者名
+          example: 山田太郎
+        authorId:
+          type: string
+          format: uuid
+          description: 作成者のユーザーID
+          example: 550e8400-e29b-41d4-a716-446655440000
+        status:
+          type: string
+          enum:
+            - draft
+            - published
+          description: 公開ステータス
+          example: published
+        createdAt:
+          type: string
+          format: date-time
+          description: 作成日時
+          example: '2026-01-28T10:00:00.000Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: 更新日時
+          example: '2026-01-28T10:00:00.000Z'
+
+    PostListResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Post'
+          description: 記事一覧
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          description: 現在のページ番号
+          example: 1
+        limit:
+          type: integer
+          description: 1ページあたりの件数
+          example: 10
+        total:
+          type: integer
+          description: 総件数
+          example: 42
+        totalPages:
+          type: integer
+          description: 総ページ数
+          example: 5
+        hasNext:
+          type: boolean
+          description: 次のページがあるか
+          example: true
+        hasPrev:
+          type: boolean
+          description: 前のページがあるか
+          example: false
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+              description: エラーコード
+              enum:
+                - VALIDATION_ERROR
+                - UNAUTHORIZED
+                - FORBIDDEN
+                - NOT_FOUND
+                - RATE_LIMIT_EXCEEDED
+                - INTERNAL_ERROR
+              example: VALIDATION_ERROR
+            message:
+              type: string
+              description: ユーザー向けエラーメッセージ
+              example: 入力内容に誤りがあります
+            details:
+              type: array
+              description: 詳細情報（オプション）
+              items:
+                type: object
+                properties:
+                  field:
+                    type: string
+                    description: エラーのあるフィールド名
+                  message:
+                    type: string
+                    description: フィールド固有のエラーメッセージ
